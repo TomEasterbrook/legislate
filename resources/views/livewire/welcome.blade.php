@@ -22,32 +22,17 @@ new class extends Component {
     }
 }; ?>
 
-<div class="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-blue-50">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Quintessential&display=swap" rel="stylesheet">
-
-    <!-- Header Banner -->
-    <header class="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div class="max-w-7xl mx-auto px-6 py-4">
-            <h1 class="text-3xl font-bold text-gray-900" style="font-family: 'Quintessential', serif; letter-spacing: 0.5px;">
-                Legislate?!
-            </h1>
+<div class="flex items-center justify-center px-4 py-12">
+    <div class="max-w-2xl w-full">
+        <!-- Subtitle -->
+        <div class="text-center mb-12">
+            <h2 class="text-3xl font-semibold text-gray-900 mb-3">
+                Choose Your Game Mode
+            </h2>
+            <p class="text-lg text-gray-600">
+                Navigate the UK Parliament in this strategic board game
+            </p>
         </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="flex-1 flex items-center justify-center px-4 py-12">
-        <div class="max-w-2xl w-full">
-            <!-- Subtitle -->
-            <div class="text-center mb-12">
-                <h2 class="text-3xl font-semibold text-gray-900 mb-3">
-                    Choose Your Game Mode
-                </h2>
-                <p class="text-lg text-gray-600">
-                    Navigate the UK Parliament in this strategic board game
-                </p>
-            </div>
 
         <!-- Game Mode Cards -->
         <div class="space-y-4">
@@ -111,14 +96,5 @@ new class extends Component {
                 </div>
             </button>
         </div>
-        </div>
-    </main>
-
-    <!-- Footer Attribution -->
-    <footer class="border-t border-gray-200 bg-white/80 backdrop-blur-sm py-6">
-        <div class="max-w-7xl mx-auto px-6 text-center text-sm text-gray-500">
-            <p>Created by Dan Easterbrook. Inspired by the "Legislate?!" board game created by Hayley Rogers.</p>
-            <p class="mt-1">Utilises assets created by Terence Eden, licensed under the Open Government License.</p>
-        </div>
-    </footer>
+    </div>
 </div>
