@@ -4,6 +4,7 @@ use App\GameStatus;
 use App\GameType;
 use App\Livewire\Concerns\ManagesPlayers;
 use App\Models\Game;
+use Livewire\Attributes\On;
 use Livewire\Volt\Component;
 
 new class extends Component {
@@ -47,6 +48,10 @@ new class extends Component {
         $game = Game::find($this->gameId);
         $game->addPlayer($this->hostName, 'red');
 
+        // Store player info in session
+        session(['game_'.$this->gameCode.'_player_name' => $this->hostName]);
+        session(['game_'.$this->gameCode.'_player_index' => 0]);
+
         $this->step = 'lobby';
     }
 
@@ -63,16 +68,15 @@ new class extends Component {
         $game->status = GameStatus::InProgress;
         $game->save();
 
+        \App\Events\GameStarted::dispatch($game);
+
         $this->redirect('/game/multiplayer/'.$this->gameCode, navigate: true);
     }
 
     public function back(): void
     {
         if ($this->step === 'lobby') {
-            $game = Game::find($this->gameId);
-            $game->players = [];
-            $game->save();
-
+            $this->leaveAndCleanup();
             $this->step = 'entering-name';
             $this->players = [];
             $this->hostName = '';
@@ -84,9 +88,57 @@ new class extends Component {
             $this->redirect('/');
         }
     }
+
+    public function leaveAndCleanup(): void
+    {
+        $game = Game::find($this->gameId);
+        if ($game) {
+            // Broadcast that host (player 0) is leaving
+            if (count($game->players) > 0) {
+                \App\Events\PlayerLeftGame::dispatch($game, 0);
+            }
+
+            // Clear all players when host leaves during waiting phase
+            $game->players = [];
+            $game->save();
+        }
+
+        // Clear session
+        session()->forget('game_'.$this->gameCode.'_player_name');
+        session()->forget('game_'.$this->gameCode.'_player_index');
+    }
+
+    #[On('echo:game.{gameCode},PlayerJoinedGame')]
+    public function refreshPlayers(): void
+    {
+        $game = Game::find($this->gameId);
+        if ($game) {
+            $this->players = $game->fresh()->players ?? [];
+        }
+    }
+
+    #[On('echo:game.{gameCode},PlayerLeftGame')]
+    public function refreshPlayersLeft(): void
+    {
+        $game = Game::find($this->gameId);
+        if ($game) {
+            $this->players = $game->fresh()->players ?? [];
+        }
+    }
 }; ?>
 
-<div x-data="{ openColorPicker: null, copied: false }" class="flex items-center justify-center px-4 py-12">
+<div x-data="{
+    openColorPicker: null,
+    copied: false,
+    init() {
+        // Detect when host closes tab or navigates away from lobby
+        window.addEventListener('beforeunload', (e) => {
+            if ('{{ $step }}' === 'lobby') {
+                @this.call('leaveAndCleanup');
+            }
+        });
+    }
+}" class="flex items-center justify-center px-4 py-12">
     <div class="max-w-4xl w-full">
         @if ($step === 'entering-name')
             <!-- Name Entry Step -->

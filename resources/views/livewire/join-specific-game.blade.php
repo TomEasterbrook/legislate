@@ -3,6 +3,7 @@
 use App\GameStatus;
 use App\Livewire\Concerns\ManagesPlayers;
 use App\Models\Game;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Volt\Component;
 
@@ -62,7 +63,14 @@ new class extends Component {
             return;
         }
 
+        $playerIndex = $game->getPlayerCount();
         $game->addPlayer($this->playerName, $this->playerColor);
+
+        // Store player info in session
+        session(['game_'.$this->gameCode.'_player_name' => $this->playerName]);
+        session(['game_'.$this->gameCode.'_player_index' => $playerIndex]);
+
+        \App\Events\PlayerJoinedGame::dispatch($game, $this->playerName, $this->playerColor);
 
         $this->redirect('/game/multiplayer/'.$this->gameCode, navigate: true);
     }
@@ -71,10 +79,39 @@ new class extends Component {
     {
         $this->redirect('/game/join', navigate: true);
     }
+
+    #[On('echo:game.{gameCode},PlayerJoinedGame')]
+    public function refreshPlayers(): void
+    {
+        $game = Game::find($this->gameId);
+        if ($game) {
+            $this->players = $game->fresh()->players ?? [];
+        }
+    }
+
+    #[On('echo:game.{gameCode},PlayerLeftGame')]
+    public function handlePlayerLeft(): void
+    {
+        $game = Game::find($this->gameId);
+        if ($game) {
+            $this->players = $game->fresh()->players ?? [];
+
+            // If host left (no players), redirect to join page
+            if (count($this->players) === 0) {
+                $this->redirect('/game/join', navigate: true);
+            }
+        }
+    }
+
+    #[On('echo:game.{gameCode},GameStarted')]
+    public function handleGameStarted(): void
+    {
+        $this->redirect('/game/multiplayer/'.$this->gameCode, navigate: true);
+    }
 }; ?>
 
 <div class="flex items-center justify-center px-4 py-12">
-    <div class="max-w-md w-full">
+    <div class="max-w-4xl w-full">
         <div class="text-center mb-8">
             <h2 class="text-3xl font-semibold text-gray-900 mb-3">
                 Join Game
@@ -90,7 +127,7 @@ new class extends Component {
                 Enter your name to join the game
             </p>
 
-            <div class="bg-white rounded-lg shadow-xl p-8">
+            <div class="bg-white rounded-lg shadow-xl p-8 max-w-md mx-auto">
                 <!-- Player Name Input -->
                 <div class="mb-6">
                     <label for="playerName" class="block text-sm font-medium text-gray-700 mb-2 text-left">
