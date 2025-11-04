@@ -13,12 +13,12 @@ new class extends Component {
         $this->players = session('game_players', []);
         $this->playerCount = count($this->players) ?: 4;
     }
-
-    public function back(): void
-    {
-        $this->redirect('/game/local', navigate: true);
-    }
 }; ?>
+
+<x-slot:title>Play Game - Legislate?!</x-slot:title>
+<x-slot:showBack>true</x-slot:showBack>
+<x-slot:backUrl>/game/local</x-slot:backUrl>
+<x-slot:backLabel>Back to Lobby</x-slot:backLabel>
 
 @vite('resources/css/single-player-game.css')
 
@@ -27,12 +27,6 @@ new class extends Component {
     playerNames: {{ json_encode(array_column($players, 'name')) }},
     assetPath: '{{ asset('game/packs/uk-parliament') }}'
 })">
-  <!-- Header -->
-  <div class="game-header">
-    <div class="brand">Legislate?!</div>
-    <button wire:click="back" class="button button--secondary">Back to Lobby</button>
-  </div>
-
   <!-- Control Bar -->
   <div class="control-bar">
     <div class="control-box">

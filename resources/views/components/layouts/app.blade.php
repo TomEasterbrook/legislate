@@ -14,7 +14,7 @@
         @vite(['resources/css/app.css','resources/js/app.js'])
     </head>
     <body class="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-blue-50">
-        <x-header />
+        <x-header :show-back="$showBack ?? false" :back-url="$backUrl ?? '/'" :back-label="$backLabel ?? 'Back'" />
 
         <main class="flex-1">
             {{ $slot }}
