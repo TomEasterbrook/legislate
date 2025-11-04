@@ -1,4 +1,4 @@
-@props(['index', 'player', 'colorData', 'availableColors', 'canRemove' => true, 'showColorPicker' => true])
+@props(['index', 'player', 'colorData', 'availableColors', 'canRemove' => true, 'showColorPicker' => true, 'readOnly' => false])
 
 <div
     wire:key="player-{{ $index }}"
@@ -46,19 +46,25 @@
 
         <!-- Player Name Input (Inline) -->
         <div class="flex-1">
-            <input
-                type="text"
-                wire:model="players.{{ $index }}.name"
-                placeholder="Enter player name..."
-                class="w-full text-xl font-semibold text-gray-900 bg-transparent border-0 border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:ring-0 px-0 py-1 transition-colors"
-                maxlength="50"
-            >
-            @error('players.' . $index . '.name')
-                <span class="block text-xs text-red-600 mt-1">{{ $message }}</span>
-            @enderror
-            @error('players.' . $index . '.color')
-                <span class="block text-xs text-red-600 mt-1">{{ $message }}</span>
-            @enderror
+            @if ($readOnly)
+                <div class="text-xl font-semibold text-gray-900 py-1">
+                    {{ $player['name'] }}
+                </div>
+            @else
+                <input
+                    type="text"
+                    wire:model="players.{{ $index }}.name"
+                    placeholder="Enter player name..."
+                    class="w-full text-xl font-semibold text-gray-900 bg-transparent border-0 border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:ring-0 px-0 py-1 transition-colors"
+                    maxlength="50"
+                >
+                @error('players.' . $index . '.name')
+                    <span class="block text-xs text-red-600 mt-1">{{ $message }}</span>
+                @enderror
+                @error('players.' . $index . '.color')
+                    <span class="block text-xs text-red-600 mt-1">{{ $message }}</span>
+                @enderror
+            @endif
         </div>
 
         <!-- Remove Button -->

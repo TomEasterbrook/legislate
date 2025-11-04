@@ -1,6 +1,9 @@
 <?php
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
+
+uses(RefreshDatabase::class);
 
 it('shows name entry step initially', function () {
     $component = Volt::test('multiplayer-lobby');

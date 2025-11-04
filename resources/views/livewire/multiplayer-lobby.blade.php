@@ -1,6 +1,9 @@
 <?php
 
+use App\GameStatus;
+use App\GameType;
 use App\Livewire\Concerns\ManagesPlayers;
+use App\Models\Game;
 use Livewire\Volt\Component;
 
 new class extends Component {
@@ -9,12 +12,22 @@ new class extends Component {
     public string $gameCode = '';
     public string $hostName = '';
     public string $step = 'entering-name'; // 'entering-name' or 'lobby'
+    public ?int $gameId = null;
 
     public array $players = [];
 
     public function mount(): void
     {
         $this->gameCode = strtoupper(substr(md5(uniqid()), 0, 6));
+
+        $game = Game::create([
+            'code' => $this->gameCode,
+            'status' => GameStatus::Waiting,
+            'game_type' => GameType::Multiplayer,
+            'players' => [],
+        ]);
+
+        $this->gameId = $game->id;
     }
 
     public function setHostName(): void
@@ -31,6 +44,9 @@ new class extends Component {
             ['name' => $this->hostName, 'color' => 'red'],
         ];
 
+        $game = Game::find($this->gameId);
+        $game->addPlayer($this->hostName, 'red');
+
         $this->step = 'lobby';
     }
 
@@ -43,17 +59,28 @@ new class extends Component {
     {
         $this->validatePlayers();
 
-        // TODO: Start the multiplayer game
+        $game = Game::find($this->gameId);
+        $game->status = GameStatus::InProgress;
+        $game->save();
+
         $this->redirect('/game/multiplayer/'.$this->gameCode, navigate: true);
     }
 
     public function back(): void
     {
         if ($this->step === 'lobby') {
+            $game = Game::find($this->gameId);
+            $game->players = [];
+            $game->save();
+
             $this->step = 'entering-name';
             $this->players = [];
             $this->hostName = '';
         } else {
+            if ($this->gameId) {
+                Game::destroy($this->gameId);
+            }
+
             $this->redirect('/');
         }
     }
@@ -111,55 +138,7 @@ new class extends Component {
             </div>
         @else
             <!-- Lobby Step -->
-            <div class="mb-8">
-                <div class="flex items-start justify-between mb-3">
-                    <div class="text-left">
-                        <h2 class="text-3xl font-semibold text-gray-900 mb-2">
-                            Multiplayer Game Lobby
-                        </h2>
-                        <p class="text-lg text-gray-600">
-                            Share the game code with others to join (2-6 players)
-                        </p>
-                    </div>
-
-                    <div class="bg-white rounded-lg shadow-lg px-4 py-3 border-2 border-gray-200" x-data="{ codeCopied: false }">
-                        <div class="flex items-center gap-3">
-                            <div class="text-center">
-                                <p class="text-xs font-medium text-gray-500 mb-1">Game Code</p>
-                                <p class="text-3xl font-bold text-gray-900 tracking-wide" style="font-family: 'Quintessential', serif;">{{ $gameCode }}</p>
-                            </div>
-                            <button
-                                type="button"
-                                @click.prevent="navigator.clipboard.writeText('{{ $gameCode }}'); codeCopied = true; setTimeout(() => codeCopied = false, 2000)"
-                                class="p-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors relative text-gray-700 cursor-pointer"
-                                title="Copy game code"
-                            >
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                                </svg>
-                                <div
-                                    x-show="codeCopied"
-                                    x-transition
-                                    class="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs py-1 px-2 rounded whitespace-nowrap"
-                                    style="display: none;"
-                                >
-                                    Copied!
-                                </div>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Players Counter -->
-            <div class="text-center mb-6">
-                <span class="inline-block px-4 py-2 bg-gray-100 rounded-full text-gray-700 font-semibold">
-                    {{ count($players) }} / 6 Players
-                </span>
-            </div>
-
-            <!-- Player Cards Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <x-multiplayer.lobby-view :gameCode="$gameCode" :players="$players">
                 @foreach ($players as $index => $player)
                     <x-player-card
                         :index="$index"
@@ -171,36 +150,25 @@ new class extends Component {
                     />
                 @endforeach
 
-                <!-- Waiting for players placeholders -->
-                @for ($i = count($players); $i < 6; $i++)
-                    <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 flex items-center justify-center">
-                        <div class="text-center text-gray-400">
-                            <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                            </svg>
-                            <p class="text-sm font-medium">Waiting for player...</p>
-                        </div>
+                <x-slot:actions>
+                    <div class="flex gap-4">
+                        <button
+                            type="button"
+                            wire:click="back"
+                            class="flex-1 py-3 px-6 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+                        >
+                            Back
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="startGame"
+                            class="flex-1 py-3 px-6 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold"
+                        >
+                            Start Game
+                        </button>
                     </div>
-                @endfor
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="flex gap-4">
-                <button
-                    type="button"
-                    wire:click="back"
-                    class="flex-1 py-3 px-6 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
-                >
-                    Back
-                </button>
-                <button
-                    type="button"
-                    wire:click="startGame"
-                    class="flex-1 py-3 px-6 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold"
-                >
-                    Start Game
-                </button>
-            </div>
+                </x-slot:actions>
+            </x-multiplayer.lobby-view>
         @endif
     </div>
 </div>
