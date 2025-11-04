@@ -23,8 +23,10 @@ new class extends Component {
     {
         $this->validatePlayers();
 
-        // TODO: Start the game with the players
-        $this->redirect('/game/local', navigate: true);
+        // Store players in session and redirect to game
+        session(['game_players' => $this->players]);
+
+        $this->redirect('/game/play', navigate: true);
     }
 
     public function back(): void
