@@ -214,23 +214,22 @@ function createEngine({ board, decks, rng = makeRng(Date.now()), playerCount = 4
 
 // UI Utilities
 function showDiceRoll(value) {
-    const overlay = document.getElementById('diceOverlay');
     const diceEl = document.getElementById('dice');
+    const buttonEl = document.getElementById('diceButton');
 
     return new Promise((resolve) => {
-        if (!overlay || !diceEl) { resolve(); return; }
+        if (!diceEl || !buttonEl) { resolve(); return; }
 
-        overlay.hidden = false;
+        buttonEl.classList.add('rolling');
         diceEl.className = 'dice rolling';
 
         setTimeout(() => {
             const v = Math.max(1, Math.min(6, Number(value) || 1));
-            diceEl.className = 'dice show-' + v + ' rolling';
-        }, 300);
+            diceEl.className = 'dice show-' + v;
+        }, 1500);
 
         setTimeout(() => {
-            overlay.hidden = true;
-            diceEl.className = 'dice';
+            buttonEl.classList.remove('rolling');
             resolve();
         }, 2500);
     });
