@@ -305,7 +305,7 @@ const DECK_LABELS = {
 };
 
 // Alpine Component
-export default function singlePlayerGame(config) {
+export default function game(config) {
     return {
         engine: null,
         board: null,

@@ -1,29 +1,52 @@
 <?php
 
-use Livewire\Attributes\Layout;
+use App\Models\Game;
 use Livewire\Volt\Component;
 
-new class extends Component {
+new class extends Component
+{
     public array $players = [];
+
     public int $playerCount = 4;
 
-    public function mount(): void
+    public ?string $code = null;
+
+    public bool $isMultiplayer = false;
+
+    public function mount(?string $code = null): void
     {
-        // Get players from session or use defaults
-        $this->players = session('game_players', []);
-        $this->playerCount = count($this->players) ?: 4;
+        // Check if this is a multiplayer game (has code parameter from query or route)
+        $this->code = $code ?? request()->query('code');
+
+        if ($this->code) {
+            // Load multiplayer game
+            $game = Game::where('code', strtoupper($this->code))->first();
+
+            if ($game) {
+                $this->isMultiplayer = true;
+                $this->players = $game->players ?? [];
+                $this->playerCount = count($this->players);
+            } else {
+                // Game not found, redirect home
+                $this->redirect('/', navigate: true);
+            }
+        } else {
+            // Local game - get players from session
+            $this->players = session('game_players', []);
+            $this->playerCount = count($this->players) ?: 4;
+        }
     }
 }; ?>
 
 <x-slot:title>Play Game - Legislate?!</x-slot:title>
 <x-slot:showBack>true</x-slot:showBack>
-<x-slot:backUrl>/game/local</x-slot:backUrl>
-<x-slot:backLabel>Back to Lobby</x-slot:backLabel>
+<x-slot:backUrl>{{ $isMultiplayer ? '/game/multiplayer/' . $code : '/game/local' }}</x-slot:backUrl>
+<x-slot:backLabel>Back to {{ $isMultiplayer ? 'Game' : 'Lobby' }}</x-slot:backLabel>
 
-@vite('resources/css/single-player-game.css')
+@vite('resources/css/game.css')
 
 <div class="game-container" x-data="{
-    ...singlePlayerGame({
+    ...game({
         playerCount: {{ $playerCount }},
         playerNames: {{ json_encode(array_column($players, 'name')) }},
         assetPath: '{{ asset('game/packs/uk-parliament') }}'

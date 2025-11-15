@@ -1,7 +1,7 @@
 import './bootstrap';
-import singlePlayerGame from './single-player-game';
+import game from './game';
 
 // Register Alpine components
 document.addEventListener('alpine:init', () => {
-    Alpine.data('singlePlayerGame', singlePlayerGame);
+    Alpine.data('game', game);
 });

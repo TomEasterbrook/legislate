@@ -7,7 +7,7 @@ export default defineConfig({
         laravel({
             input: [
                 'resources/css/app.css',
-                'resources/css/single-player-game.css',
+                'resources/css/game.css',
                 'resources/js/app.js'
             ],
             refresh: true,

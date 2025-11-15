@@ -126,7 +126,7 @@ it('can start game with valid player names', function () {
         ->set('players.1.name', 'Bob')
         ->call('startGame')
         ->assertHasNoErrors()
-        ->assertRedirect('/game/local');
+        ->assertRedirect('/game/play');
 });
 
 it('can navigate back to welcome page', function () {
