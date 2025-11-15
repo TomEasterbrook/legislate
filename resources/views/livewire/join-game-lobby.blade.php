@@ -39,7 +39,7 @@ new class extends Component {
             return;
         }
 
-        $this->redirect('/game/join/'.$code, navigate: true);
+        $this->redirect('/game/multiplayer/'.$code, navigate: true);
     }
 
     public function back(): void

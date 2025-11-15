@@ -69,7 +69,7 @@ it('can proceed to join specific game with valid game code', function () {
     $component->set('gameCode', 'ABC123')
         ->call('joinGame')
         ->assertHasNoErrors()
-        ->assertRedirect('/game/join/ABC123');
+        ->assertRedirect('/game/multiplayer/ABC123');
 });
 
 it('redirects to home when back is clicked', function () {
@@ -88,14 +88,14 @@ it('accepts valid alphanumeric game codes', function () {
     $component->set('gameCode', '123456')
         ->call('joinGame')
         ->assertHasNoErrors()
-        ->assertRedirect('/game/join/123456');
+        ->assertRedirect('/game/multiplayer/123456');
 
     $component = Volt::test('join-game-lobby');
 
     $component->set('gameCode', 'ABCDEF')
         ->call('joinGame')
         ->assertHasNoErrors()
-        ->assertRedirect('/game/join/ABCDEF');
+        ->assertRedirect('/game/multiplayer/ABCDEF');
 });
 
 it('shows error when game code does not exist', function () {
