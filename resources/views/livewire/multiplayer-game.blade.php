@@ -85,7 +85,11 @@ new class extends Component {
         $this->game->status = GameStatus::InProgress;
         $this->game->save();
 
-        // TODO: Redirect to actual game
+        // Broadcast to all players that the game has started
+        \App\Events\GameStarted::dispatch($this->game);
+
+        // Redirect host to game board
+        $this->redirect('/game/play?code='.$this->gameCode, navigate: true);
     }
 
     public function leaveGame(): void
@@ -146,6 +150,13 @@ new class extends Component {
                 }
             }
         }
+    }
+
+    #[On('echo:game.{gameCode},GameStarted')]
+    public function handleGameStarted(): void
+    {
+        // Redirect all players to the game board
+        $this->redirect('/game/play?code='.$this->gameCode, navigate: true);
     }
 
     public function getSubtitle(): string
