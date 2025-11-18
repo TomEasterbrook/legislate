@@ -321,9 +321,10 @@ export default function game(config) {
         async init() {
             try {
                 const basePath = config.assetPath;
+                const cacheBuster = Date.now();
 
                 const [board, commons, early, lords, pingpong, implementation] = await Promise.all([
-                    fetch(`${basePath}/board.json`).then(r => r.json()),
+                    fetch(`${basePath}/board.json?v=${cacheBuster}`).then(r => r.json()),
                     fetch(`${basePath}/cards/commons.json`).then(r => r.json()),
                     fetch(`${basePath}/cards/early.json`).then(r => r.json()),
                     fetch(`${basePath}/cards/lords.json`).then(r => r.json()),
