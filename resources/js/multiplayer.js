@@ -110,12 +110,22 @@ export default function multiplayerGame(config) {
         // This mimics what the engine does internally
         if (type === 'MOVE_STEP') {
             const p = this.engine.state.players.find(x => x.id === payload.playerId);
-            if (p) p.position = payload.position;
+            if (p) {
+                p.position = payload.position;
+                this.renderTokens(); // Re-render tokens to show updated position
+            }
         }
         else if (type === 'TURN_BEGIN') {
             this.engine.state.turnIndex = payload.index;
             this.updateTurnIndicator();
             this.renderTokens();
+        }
+        else if (type === 'MISS_TURN') {
+            // Sync skip counter when a player misses their turn
+            const p = this.engine.state.players.find(x => x.id === payload.playerId);
+            if (p && p.skip > 0) {
+                p.skip -= 1;
+            }
         }
         else if (type === 'DICE_ROLL') {
             this.engine.state.lastRoll = payload.value;
@@ -124,27 +134,67 @@ export default function multiplayerGame(config) {
             // No state update needed, just toast
         }
         else if (type === 'CARD_DRAWN') {
-            // No state update needed, modal handled by listener
+            // Sync deck state by removing the drawn card
+            if (payload.deck && this.engine.state.decks[payload.deck]) {
+                this.engine.state.decks[payload.deck].shift();
+            }
         }
-        
+        else if (type === 'CARD_APPLIED') {
+            // Apply card effects to sync state changes (position, skip, extraRoll)
+            const p = this.engine.state.players.find(x => x.id === payload.playerId);
+            if (p && payload.card && payload.card.effect) {
+                const [effectType, arg] = payload.card.effect.split(':');
+
+                if (effectType === 'move') {
+                    const n = Number(arg || 0);
+                    let i = p.position + n;
+                    const endIndex = this.board.spaces[this.board.spaces.length - 1].index;
+                    if (i < 0) i = 0;
+                    if (i > endIndex) i = endIndex;
+                    p.position = i;
+                } else if (effectType === 'goto') {
+                    let i = Number(arg || 0);
+                    const endIndex = this.board.spaces[this.board.spaces.length - 1].index;
+                    if (i < 0) i = 0;
+                    if (i > endIndex) i = endIndex;
+                    p.position = i;
+                } else if (effectType === 'miss_turn') {
+                    p.skip = (p.skip || 0) + 1;
+                } else if (effectType === 'extra_roll') {
+                    p.extraRoll = true;
+                }
+
+                this.renderTokens(); // Re-render to show position changes
+            }
+        }
+
         // Emit to local bus to trigger UI updates
         this.engine.bus.emit(type, payload);
-        
+
         this.replaying = false;
     };
 
     instance.handleClientAction = function(type, payload) {
         // Host receives request from Client
         if (type === 'REQUEST_ROLL') {
-            // Verify it's the correct player's turn?
-            // For now, just trust the request or let the engine handle turn validation
-            // But engine.takeTurn() checks skip, etc.
-            // We should check if the requesting player is the current player
-            const current = this.engine.state.players[this.engine.state.turnIndex];
-            // We don't have the requester's ID in the payload currently,
-            // but we can assume the client only sends it if it's their turn.
-            // Or we can add playerId to payload.
+            // Server-side validation: Verify it's the correct player's turn
+            const currentPlayer = this.engine.state.players[this.engine.state.turnIndex];
+            const requestingPlayerId = payload.playerId;
 
+            if (!requestingPlayerId) {
+                console.error('HOST rejected roll request - no player ID provided');
+                return;
+            }
+
+            if (currentPlayer.id !== requestingPlayerId) {
+                console.error('HOST rejected roll request - not current player\'s turn', {
+                    currentPlayerId: currentPlayer.id,
+                    requestingPlayerId: requestingPlayerId
+                });
+                return;
+            }
+
+            console.log('HOST accepted roll request from player:', requestingPlayerId);
             originalRoll.call(this);
         }
     };
@@ -190,12 +240,17 @@ export default function multiplayerGame(config) {
         if (this.isHost) {
             originalRoll.call(this);
         } else {
-            const current = this.engine.state.players[this.engine.state.turnIndex];
-            // Optional: Check if it's my turn before sending
-            // if (current.name !== this.myPlayerName) return;
+            // Client-side validation: Only send request if it's my turn
+            if (!this.isMyTurn) {
+                console.warn('CLIENT blocked roll attempt - not my turn');
+                return;
+            }
 
-            console.log('CLIENT sending roll request');
-            window.Livewire.dispatch('client-action', { type: 'REQUEST_ROLL', payload: {} });
+            console.log('CLIENT sending roll request with playerId:', this.myPlayerId);
+            window.Livewire.dispatch('client-action', {
+                type: 'REQUEST_ROLL',
+                payload: { playerId: this.myPlayerId }
+            });
         }
     };
 
