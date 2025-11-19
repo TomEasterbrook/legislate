@@ -13,6 +13,7 @@ export default function multiplayerGame(config) {
     instance.isHost = config.isHost;
     instance.gameCode = config.gameCode;
     instance.myPlayerId = config.myPlayerId;
+    instance.savedState = config.savedState || null;
     instance.replaying = false;
     instance.isMyTurn = false; // Initialize early so Alpine can track it
 
@@ -30,6 +31,13 @@ export default function multiplayerGame(config) {
         // Only setup multiplayer if engine was created successfully
         if (this.engine && this.engine.bus) {
             console.log('Engine initialized successfully, setting up multiplayer...');
+
+            // Restore saved state if it exists
+            if (this.savedState) {
+                console.log('Restoring saved game state:', this.savedState);
+                this.restoreState(this.savedState);
+            }
+
             this.setupMultiplayer();
         } else {
             console.error('Engine not initialized, cannot setup multiplayer');
@@ -83,6 +91,12 @@ export default function multiplayerGame(config) {
             console.log('HOST broadcasting event:', type);
             // Dispatch Livewire event
             window.Livewire.dispatch('game-broadcast', { type, payload });
+
+            // Save game state after turn changes
+            if (type === 'TURN_BEGIN') {
+                console.log('Turn changed, saving game state...');
+                this.saveGameState();
+            }
         } else {
             console.log('NOT broadcasting - isHost:', this.isHost, 'replaying:', this.replaying);
         }
@@ -183,6 +197,72 @@ export default function multiplayerGame(config) {
             console.log('CLIENT sending roll request');
             window.Livewire.dispatch('client-action', { type: 'REQUEST_ROLL', payload: {} });
         }
+    };
+
+    // Method to save game state to database
+    instance.saveGameState = function() {
+        if (!this.isHost || !this.engine) {
+            return;
+        }
+
+        const state = {
+            players: this.engine.state.players.map(p => ({
+                id: p.id,
+                name: p.name,
+                color: p.color,
+                position: p.position,
+                skip: p.skip,
+                extraRoll: p.extraRoll
+            })),
+            turnIndex: this.engine.state.turnIndex,
+            lastRoll: this.engine.state.lastRoll,
+            decks: this.engine.state.decks
+        };
+
+        console.log('Saving game state:', state);
+        window.Livewire.find(document.querySelector('[wire\\:id]').getAttribute('wire:id'))
+            .call('saveState', state);
+    };
+
+    // Method to restore game state
+    instance.restoreState = function(state) {
+        if (!this.engine || !state) {
+            return;
+        }
+
+        console.log('Restoring state:', state);
+
+        // Restore player state
+        if (state.players) {
+            state.players.forEach((savedPlayer, index) => {
+                if (this.engine.state.players[index]) {
+                    this.engine.state.players[index].position = savedPlayer.position || 0;
+                    this.engine.state.players[index].skip = savedPlayer.skip || 0;
+                    this.engine.state.players[index].extraRoll = savedPlayer.extraRoll || false;
+                }
+            });
+        }
+
+        // Restore turn index
+        if (typeof state.turnIndex === 'number') {
+            this.engine.state.turnIndex = state.turnIndex;
+        }
+
+        // Restore last roll
+        if (typeof state.lastRoll === 'number') {
+            this.engine.state.lastRoll = state.lastRoll;
+        }
+
+        // Restore decks if they exist
+        if (state.decks) {
+            this.engine.state.decks = state.decks;
+        }
+
+        // Update UI
+        this.renderTokens();
+        this.updateTurnIndicator();
+
+        console.log('State restored successfully');
     };
 
     return instance;

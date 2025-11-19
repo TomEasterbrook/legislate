@@ -17,6 +17,7 @@ class Game extends Model
         'status',
         'game_type',
         'players',
+        'state',
     ];
 
     protected function casts(): array
@@ -25,6 +26,7 @@ class Game extends Model
             'status' => GameStatus::class,
             'game_type' => GameType::class,
             'players' => 'array',
+            'state' => 'array',
         ];
     }
 
@@ -67,5 +69,16 @@ class Game extends Model
     public function getUsedColors(): array
     {
         return array_column($this->players ?? [], 'color');
+    }
+
+    public function saveGameState(array $state): void
+    {
+        $this->state = $state;
+        $this->save();
+    }
+
+    public function getGameState(): ?array
+    {
+        return $this->state;
     }
 }

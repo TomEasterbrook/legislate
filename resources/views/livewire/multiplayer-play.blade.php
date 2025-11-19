@@ -11,6 +11,7 @@ new class extends Component
     public ?string $code = null;
     public bool $isHost = false;
     public ?string $myPlayerId = null;
+    public ?array $savedState = null;
 
     public function mount(?string $code = null): void
     {
@@ -30,6 +31,7 @@ new class extends Component
 
         $this->players = $game->players ?? [];
         $this->playerCount = count($this->players);
+        $this->savedState = $game->getGameState();
 
         $myName = session('multiplayer_player_name');
         if ($myName) {
@@ -63,6 +65,19 @@ new class extends Component
             \App\Events\ClientAction::dispatch($this->code, $type, $payload);
         }
     }
+
+    public function saveState(array $state): void
+    {
+        if (!$this->isHost) {
+            return;
+        }
+
+        $game = Game::where('code', strtoupper($this->code))->first();
+        if ($game) {
+            $game->saveGameState($state);
+            \Log::debug('Game state saved', ['code' => $this->code, 'state' => $state]);
+        }
+    }
 }; ?>
 
 <x-slot:title>Play Multiplayer - Legislate?!</x-slot:title>
@@ -79,7 +94,8 @@ new class extends Component
         assetPath: '{{ asset('game/packs/uk-parliament') }}',
         isHost: {{ $isHost ? 'true' : 'false' }},
         gameCode: '{{ $code }}',
-        myPlayerId: '{{ $myPlayerId ?? '' }}'
+        myPlayerId: '{{ $myPlayerId ?? '' }}',
+        savedState: {{ $savedState ? json_encode($savedState) : 'null' }}
     }),
     panelOpen: false
 }"
