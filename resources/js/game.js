@@ -319,18 +319,26 @@ export default function game(config) {
         flushDone: Promise.resolve(),
 
         async init() {
+            console.log('BASE GAME init() starting with config:', config);
             try {
                 const basePath = config.assetPath;
+                console.log('Fetching assets from:', basePath);
                 const cacheBuster = Date.now();
 
                 const [board, commons, early, lords, pingpong, implementation] = await Promise.all([
-                    fetch(`${basePath}/board.json?v=${cacheBuster}`).then(r => r.json()),
+                    fetch(`${basePath}/board.json?v=${cacheBuster}`).then(r => {
+                        console.log('board.json response:', r.status);
+                        if (!r.ok) throw new Error(`Failed to fetch board.json: ${r.status}`);
+                        return r.json();
+                    }),
                     fetch(`${basePath}/cards/commons.json`).then(r => r.json()),
                     fetch(`${basePath}/cards/early.json`).then(r => r.json()),
                     fetch(`${basePath}/cards/lords.json`).then(r => r.json()),
                     fetch(`${basePath}/cards/pingpong.json`).then(r => r.json()),
                     fetch(`${basePath}/cards/implementation.json`).then(r => r.json()),
                 ]);
+
+                console.log('All assets loaded, creating engine...');
 
                 this.board = board;
                 this.engine = createEngine({
@@ -340,12 +348,17 @@ export default function game(config) {
                     playerNames: config.playerNames || []
                 });
 
+                console.log('Engine created:', !!this.engine);
+
                 this.players = this.engine.state.players;
                 this.setupEventListeners();
                 this.renderTokens();
                 this.updateTurnIndicator();
+
+                console.log('BASE GAME init() complete');
             } catch (err) {
                 console.error('BOOT_FAIL', err);
+                console.error('BOOT_FAIL stack:', err.stack);
             }
         },
 

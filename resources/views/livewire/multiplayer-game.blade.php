@@ -35,6 +35,22 @@ new class extends Component {
 
         // Always start with not joined - users must enter name each time
         $this->hasJoined = false;
+        
+        // Check session for existing join
+        $savedName = session('multiplayer_player_name');
+        if ($savedName) {
+            foreach ($this->players as $index => $player) {
+                if ($player['name'] === $savedName) {
+                    $this->playerName = $savedName;
+                    $this->myPlayerName = $savedName;
+                    $this->myPlayerIndex = $index;
+                    $this->isHost = $index === 0;
+                    $this->hasJoined = true;
+                    $this->playerColor = $player['color'];
+                    break;
+                }
+            }
+        }
 
         // Get next available color for when they join
         $this->playerColor = $this->getNextAvailableColor();
@@ -65,6 +81,9 @@ new class extends Component {
         // Refresh game to get updated players array
         $this->game->refresh();
 
+        // Save to session so we remember who we are
+        session(['multiplayer_player_name' => $this->playerName]);
+
         // Update local state (only in memory, not in session)
         $this->myPlayerName = $this->playerName;
         $this->myPlayerIndex = $playerIndex;
@@ -89,7 +108,7 @@ new class extends Component {
         \App\Events\GameStarted::dispatch($this->game);
 
         // Redirect host to game board
-        $this->redirect('/game/play?code='.$this->gameCode, navigate: true);
+        $this->redirect('/game/multiplayer-play?code='.$this->gameCode, navigate: true);
     }
 
     public function leaveGame(): void
@@ -156,7 +175,7 @@ new class extends Component {
     public function handleGameStarted(): void
     {
         // Redirect all players to the game board
-        $this->redirect('/game/play?code='.$this->gameCode, navigate: true);
+        $this->redirect('/game/multiplayer-play?code='.$this->gameCode, navigate: true);
     }
 
     public function getSubtitle(): string
